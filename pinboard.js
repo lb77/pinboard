@@ -6,6 +6,7 @@ const pinnedRecently = new Set();
 const sql = require("sqlite");
 sql.open("./database/pindb.sqlite");
 
+var prefix="pin.";
 client.login(pind.tokenboi)
 
 client.on("ready", () => {
@@ -139,31 +140,71 @@ client.on("channelPinsUpdate", channel => {
 client.on("message", (message) => {
     if (message.author.bot) return;
     if (message.channel.type == 'dm') return;
-    const boardCh = message.guild.channels.find("name", "pinboard")
-    const args = message.content.split(" ").slice(1).join(" ");
 
-    if (message.content.toLowerCase() == (pind.prefix + "info")) {
-        message.channel.send("<:pinboard:381044242266456064> Pinboard\n```\nEver wanted to go past discord's pin limit? Are you known for pinning just too much? Well, worry no longer! Pinboard will take care of it for you!\n-=Techie Stuff=-\nLib: discord.js\nRunning on node v8\nHosted on glitch.com\n```\nPinboard requires a #pinboard channel, along with the Manage Messages, Send Messages, and Embed Links permissions.\n`Pinboard, made by SmartiePlays#543`")
+    //const boardCh = message.guild.channels.find("name", "pinboard")
+    const args = message.content.split(" ").slice(1).join(" ");
+	
+	/* Info commands */
+	if (message.content.toLowerCase() == prefix + "help") {
+        message.channel.send("**Pinboard Help**", {
+            embed: {
+                color: 0x123456,
+                description: "**Prefix: `"+prefix+"`**\n\n`info` - Uhhhh stuff, I guess?\n`check` - Is Pinboard ready to go?\n`board` - Create any channels for mirroring that don't exist already.\n`setup` - Need help setting up Pinboard?\n`git` - A link to the GitHub repo!\n\n**__Database Commands__**\n`dbstats` - View the info of your guild in the database!\n`setping` - Want Pinboard to ping with every pin?"
+            }
+        })
     }
 
-    if (message.content == pind.prefix + "stop") {
+    if (message.content.toLowerCase() == (prefix + "info")) {
+        message.channel.send("<:pinboard:381044242266456064> Pinboard\n```\nEver wanted to go past discord's pin limit? Are you known for pinning just too much? Well, worry no longer! Pinboard will take care of it for you!\n-=Techie Stuff=-\nLib: discord.js\nRunning on node v8\nHosted on glitch.com\n```\nPinboard requires a #pinboard channel, along with the Manage Messages, Send Messages, and Embed Links permissions.\n`Pinboard, made by SmartiePlays#543`")
+    }
+    
+    if (message.content.toLowerCase() == (prefix+"invite")) {
+        message.channel.send(`Invite me to your server with this link!\nhttps://discordapp.com/oauth2/authorize?client_id=${client.user.id}&scope=bot&permissions=289808`)
+    }
+
+    if (message.content.toLowerCase() == (prefix+"setup")) {
+        message.channel.send("Need help setting me up? Have I got a guide for you!\nhttps://github.com/SmartieYT/pinboard/blob/master/setup.md")
+    }
+
+    if (message.content.toLowerCase() == (prefix+"git") || message.content.toLowerCase() == prefix+"github") {
+        message.reply("This is my GitHub repo!\nhttps://github.com/SmartieYT/pinboard")
+    }
+
+    if (message.content == prefix + "stop") {
         if (message.author.id !== "374245143655612428") return;
         process.exit()
     }
 
-    if (message.content.toLowerCase() == pind.prefix + "check") {
-        if (message.channel.permissionsFor(message.guild.me).has("MANAGE_MESSAGES") == false) return message.channel.send("I do not have the manage messages permission for this guild! Please contact a server admin.");
+    if (message.content.toLowerCase() == prefix + "check") {
+        if (message.channel.permissionsFor(message.guild.me).has("MANAGE_MESSAGES") == false)
+			return message.channel.send("I do not have the manage messages permission for this guild! Please contact a server admin.");
 
-        if (boardCh.permissionsFor(message.guild.me).has("SEND_MESSAGES") == false) return message.channel.send("Check failed! I do not have the send messages permission in the pinboard channel!");
+        if (boardCh.permissionsFor(message.guild.me).has("SEND_MESSAGES") == false)
+			return message.channel.send("Check failed! I do not have the send messages permission in the pinboard channel!");
 
-        if (message.guild.me.hasPermission("EMBED_LINKS") == false) return message.channel.send("I do not have the embed links permission for this guild! Please contact a server admin.");
-	
+        if (message.guild.me.hasPermission("EMBED_LINKS") == false)
+			return message.channel.send("I do not have the embed links permission for this guild! Please contact a server admin.");
+		
+		sql.get(`SELECT channelFrom,channelTo FROM channelPairs WHERE guildId = ${message.guild.id}`).then((pairs) => {	
+			if (!pairs) {
+				return message.channel.send("No channels set up for pin mirroring! Run \"" + prefix + ".add channel1 channel2\" to mirror pins from channel1 to channel2.");
+			}
+
+			pairs.forEach((pair) => {
+				
+			});
+		}).catch(() => {
+			console.error;
+			sql.run("CREATE TABLE IF NOT EXISTS channelPairs (guildId INTEGER, channelFrom TEXT, channelTo Text)").then(() => {
+				return message.channel.send("No channels set up for pin mirroring! Run \"" + prefix + ".add channel1 channel2\" to mirror pins from channel1 to channel2.");
+			})
+		})
 	for set in 
-        if (!boardCh) return message.channel.send("Channel check failed! Please create a #pinboard channel, or run "+pind.prefix+"board, and let me make it for you!");
+        if (!boardCh) return message.channel.send("Channel check failed! Please create a #pinboard channel, or run "+prefix+"board, and let me make it for you!");
         message.channel.send("Check passed. I'm ready to start! :wave:");
     }
 
-    if (message.content.toLowerCase() == pind.prefix + "board") {
+    if (message.content.toLowerCase() == prefix + "board") {
         if (!boardCh) {
             if (message.guild.me.hasPermission("MANAGE_CHANNELS", true, true, true) == false) return message.reply("I do not have the manage channels permission! Please contact a server admin.")
             if (message.member.hasPermission("MANAGE_CHANNELS", true, true, true) == false) return message.reply("you do not have the manage channels permission!")
@@ -173,47 +214,27 @@ client.on("message", (message) => {
         }
     }
 
-    if (message.content.toLowerCase() == pind.prefix + "help") {
-        message.channel.send("**Pinboard Help**", {
-            embed: {
-                color: 0x123456,
-                description: "**Prefix: `"+pind.prefix+"`**\n\n`info` - Uhhhh stuff, I guess?\n`check` - Is Pinboard ready to go?\n`board` - Create the #pinboard channel, if it doesn't exist already.\n`setup` - Need help setting up Pinboard?\n`git` - A link to the GitHub repo!\n\n**__Database Commands__**\n`dbstats` - View the info of your guild in the database!\n`setping` - Want Pinboard to ping with every pin?"
-            }
-        })
-    }
 
-    if (message.content.toLowerCase() == (pind.prefix+"invite")) {
-        message.channel.send(`Invite me to your server with this link!\nhttps://discordapp.com/oauth2/authorize?client_id=${client.user.id}&scope=bot&permissions=289808`)
-    }
-
-    if (message.content.toLowerCase() == (pind.prefix+"setup")) {
-        message.channel.send("Need help setting me up? Have I got a guide for you!\nhttps://github.com/SmartieYT/pinboard/blob/master/setup.md")
-    }
-
-    if (message.content.toLowerCase() == (pind.prefix+"git") || message.content.toLowerCase() == pind.prefix+"github") {
-        message.reply("This is my GitHub repo!\nhttps://github.com/SmartieYT/pinboard")
-    }
-
-    if (message.content.toLowerCase().startsWith(pind.prefix+"setping")) {
+    if (message.content.toLowerCase().startsWith(prefix+"setping")) {
         if (message.member.hasPermission("MANAGE_GUILD", true, true, true) == false) return message.reply("no");
         if (args == "everyone") {
             sql.get(`SELECT * FROM guildInfo WHERE guildId = ${message.guild.id}`).then(info => {
                 if (!info) {
                     sql.run("INSERT INTO guildInfo (guildId, pingPin) VALUES (?, ?)", [message.guild.id, "everyone"])
-                    message.reply("Pinboard will now ping everyone on each "+pind.prefix+"")
+                    message.reply("Pinboard will now ping everyone on each "+prefix+"")
                 } else {
                     sql.run(`UPDATE guildInfo SET pingPin = "everyone" WHERE guildId = ${message.guild.id}`)
-                    message.reply("Pinboard will now ping everyone on each "+pind.prefix+"")
+                    message.reply("Pinboard will now ping everyone on each "+prefix+"")
                 }
             })
         } else if (args == "here") {
             sql.get(`SELECT * FROM guildInfo WHERE guildId = ${message.guild.id}`).then(info => {
                 if (!info) {
                     sql.run("INSERT INTO guildInfo (guildId, pingPin) VALUES (?, ?)", [message.guild.id, "here"])
-                    message.reply("Pinboard will now ping here on each "+pind.prefix+"")
+                    message.reply("Pinboard will now ping here on each "+prefix+"")
                 } else {
                     sql.run(`UPDATE guildInfo SET pingPin = "here" WHERE guildId = ${message.guild.id}`)
-                    message.reply("Pinboard will now ping here on each "+pind.prefix+"")
+                    message.reply("Pinboard will now ping here on each "+prefix+"")
                 }
             })
         } else if (args == "none") {
@@ -223,7 +244,7 @@ client.on("message", (message) => {
                     message.reply("Pinboard will no longer ping with each pin")
                 } else {
                     sql.run(`UPDATE guildInfo SET pingPin = "false" WHERE guildId = ${message.guild.id}`)
-                    message.reply("Pinboard will no longer ping each "+pind.prefix+"")
+                    message.reply("Pinboard will no longer ping each "+prefix+"")
                 }
             })
         } else {
@@ -231,7 +252,7 @@ client.on("message", (message) => {
         }
     }
 
-    if (message.content.toLowerCase().startsWith(pind.prefix+"dbstats")) {
+    if (message.content.toLowerCase().startsWith(prefix+"dbstats")) {
         message.channel.send("Fetching your info! This may take a while...").then(msg => {
             //This part is copy-pasted from above, more or less
             sql.get(`SELECT * FROM guildInfo WHERE guildId = ${message.guild.id}`).then(info => {
