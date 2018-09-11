@@ -141,7 +141,6 @@ client.on("message", (message) => {
     if (message.author.bot) return;
     if (message.channel.type == 'dm') return;
 
-    //const boardCh = message.guild.channels.find("name", "pinboard")
     const args = message.content.split(" ").slice(1).join(" ");
 	
 	/* Info commands */
@@ -190,9 +189,26 @@ client.on("message", (message) => {
 				return message.channel.send("No channels set up for pin mirroring! Run \"" + prefix + ".add channel1 channel2\" to mirror pins from channel1 to channel2.");
 			}
 
+                  //const boardCh = message.guild.channels.find("name", "pinboard")
+                        var channelTo, msg = "";
 			pairs.forEach((pair) => {
-				
+			        msg += channelFrom + " -> " + pair.channelTo;
+                                channelTo = message.guild.channels.find("name", pair.channelTo);
+                                channelFrom = message.guild.channels.find("name", pair.channelFrom);
+                                
+                                if (!channelTo || !channelFrom) {
+                                    msg += ": Missing ";
+                                    if (!channelTo)
+                                        msg += pair.channelTo;
+                                    if (!channelFrom)
+                                        msg += 
+                                }
+
+                                msg += "\n";
 			});
+
+                        if (msg.indexOf("Missing") >= 0)
+                            msg += "Channel check failed! Please create the missing channels, or run " + prefix + ".fix to automatically create them."
 		}).catch(() => {
 			console.error;
 			sql.run("CREATE TABLE IF NOT EXISTS channelPairs (guildId INTEGER, channelFrom TEXT, channelTo Text)").then(() => {
