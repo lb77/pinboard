@@ -189,36 +189,46 @@ client.on("message", (message) => {
 				return message.channel.send("No channels set up for pin mirroring! Run \"" + prefix + ".add channel1 channel2\" to mirror pins from channel1 to channel2.");
 			}
 
-                  //const boardCh = message.guild.channels.find("name", "pinboard")
-                        var channelTo, msg = "";
+			//const boardCh = message.guild.channels.find("name", "pinboard")
+			var channelTo, reply = "";
 			pairs.forEach((pair) => {
-			        msg += channelFrom + " -> " + pair.channelTo;
-                                channelTo = message.guild.channels.find("name", pair.channelTo);
-                                channelFrom = message.guild.channels.find("name", pair.channelFrom);
-                                
-                                if (!channelTo || !channelFrom) {
-                                    msg += ": Missing ";
-                                    if (!channelTo)
-                                        msg += pair.channelTo;
-                                    if (!channelFrom)
-                                        msg += 
-                                }
+				reply += channelFrom + " -> " + pair.channelTo;
+				channelTo = message.guild.channels.find("name", pair.channelTo);
+				channelFrom = message.guild.channels.find("name", pair.channelFrom);
 
-                                msg += "\n";
+				if (!channelTo) {
+					reply += ": Missing "
+					if (!channelFrom) {
+						reply += pair.channelFrom + ", ";
+					}
+					reply += pair.channelTo;
+				} else if (!channelFrom) {
+					reply += ": Missing "
+					if (!channelTo) {
+						reply += pair.channelTo + ", ";
+					}
+					reply += pair.channelFrom;
+				}
+
+				reply += "\n";
 			});
 
-                        if (msg.indexOf("Missing") >= 0)
-                            msg += "Channel check failed! Please create the missing channels, or run " + prefix + ".fix to automatically create them."
+			if (reply.indexOf("Missing") >= 0) {
+				reply += "\nChannel check failed! Please fix the missing channels.\n";
+				reply += "You can run \"" + prefix + ".create channel1 [channel2 ...]\" to automatically create whatever channels are necessary.";
+			}
+
+			return message.channel.send(reply);
 		}).catch(() => {
 			console.error;
 			sql.run("CREATE TABLE IF NOT EXISTS channelPairs (guildId INTEGER, channelFrom TEXT, channelTo Text)").then(() => {
 				return message.channel.send("No channels set up for pin mirroring! Run \"" + prefix + ".add channel1 channel2\" to mirror pins from channel1 to channel2.");
 			})
 		})
-	for set in 
-        if (!boardCh) return message.channel.send("Channel check failed! Please create a #pinboard channel, or run "+prefix+"board, and let me make it for you!");
-        message.channel.send("Check passed. I'm ready to start! :wave:");
-    }
+		for set in 
+			if (!boardCh) return message.channel.send("Channel check failed! Please create a #pinboard channel, or run "+prefix+"board, and let me make it for you!");
+		message.channel.send("Check passed. I'm ready to start! :wave:");
+	}
 
     if (message.content.toLowerCase() == prefix + "board") {
         if (!boardCh) {
