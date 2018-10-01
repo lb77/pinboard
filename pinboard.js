@@ -14,20 +14,32 @@ client.on("ready", () => {
 });
 
 client.on("channelPinsUpdate", channel => {
-    // First, get guild info from the database
-	var mainContent;
+	if (pinnedRecently.has(channel.id) return;
+	
+    // First, get all channel pairs from the database
     sql.get(`SELECT * FROM channelPairs WHERE guildId = ${channel.guild.id}`).then((info) => {
         if (!info) return;
 
 		info.forEach((row) => {
-			mirrorExists = channel.guild.channels.find("name", row.channelTo);
-			if (!mirrorExists) return;
+			// Check if mirror channel exists + we have perms to send there
+			var mirror = channel.guild.channels.find("name", row.channelTo);
+			if (!mirror) {
+				channel.send("Could not mirror to #" + row.channelTo + " -- doesn't exist!");
+				return;
+			}
 
-			var mainContent = ""
-			if (i.pingPin == "everyone") {
-				var mainContent = "@everyone"
-			} else if (info.pingPin == "here") {
-				var mainContent = "@here"
+			var perms = mirror.permissionsFor(mirror.guild.me);
+			if (!perms.has("EMBED_LINKS") || !perms.has("SEND_MESSAGES")) {
+				channel.send("Could not mirror to #" + row.channelTo + " -- insufficient permissions!");
+				return;
+			}
+
+			if (row.pingPin === "everyone") {
+				var mainContent = "@everyone";
+			} else if (row.pingPin === "here") {
+				var mainContent = "@here";
+			} else {
+				var mainContent = "";
 			}
 
 			channel.fetchPinnedMessages().then((messages) => {
@@ -54,66 +66,42 @@ client.on("channelPinsUpdate", channel => {
 				var attachURL = '';
 				if (pinMsgs.attachments.first() !== undefined) {
 					if (!pinMsgs.attachments.first().width) {
-						attchURL = `[Attachment](${pinMsgs.attachments.first().url})`
+						attchURL = `[Attachment](${pinMsgs.attachments.first().url})`;
 					}
 				}
 
-				if (!board) {
-					if (channel.guild.me.hasPermission("MANAGE_CHANNELS") == false) return;
-					channel.guild.createChannel('pinboard', 'text')
-
-					channel.guild.channels.find("name", "pinboard").send(mainContent, {
-						embed: {
-							color: 0x123456,
+				mirror.send(mainContent + `\nhttps://discordapp.com/channels/${pinMsgs.guild.id}/${pinMsgs.channel.id}/${pinMsgs.id}`, {
+					embed: {
+						color: 0x123456,
 							title: `New pinned message in ${channel.name}`,
-							description: pinMsgs.content
-						},
-						image: {
-							url: atch
-						},
-						thumbnail: {
-							url: pinMsgs.author.avatarURL
-						}
-					});
-					if (ch.permissionsFor(ch.guild.me).has("MANAGE_MESSAGES") == false) return;
-					pinMsgs.unpin()
-					pinnedRecently.add(ch.id);
-					setTimeout(() => {
-						pinnedRecently.delete(ch.id);
-					}, 45000);
-				} else {
-					if (board.permissionsFor(board.guild.me).has("EMBED_LINKS") == false) return;
-					if (board.permissionsFor(board.guild.me).has("SEND_MESSAGES") == false) return;
-					board.send(mainContent + `\nhttps://discordapp.com/channels/${pinMsgs.guild.id}/${pinMsgs.channel.id}/${pinMsgs.id}`, {
-						embed: {
-							color: 0x123456,
-								title: `New pinned message in ${channel.name}`,
-								description: `${pinMsgs.content}\n**${attchURL}**`,
-								image: {
-									url: atch
-								},
-								thumbnail: {
-									url: pinMsgs.author.avatarURL
-								},
-								footer: {
-									text: `Message created by ${pinMsgs.author.username} (<@${pinMsgs.author.id}>)`
-								}
-						}
-					});
-					
-					if (ch.permissionsFor(ch.guild.me).has("MANAGE_MESSAGES") == false) return;
-					
-					pinMsgs.unpin()
-					pinnedRecently.add(ch.id);
-					setTimeout(() => {
-						pinnedRecently.delete(ch.id);
-					}, 45000);
-				}
+							description: `${pinMsgs.content}\n**${attchURL}**`,
+							image: {
+								url: imgThumb
+							},
+							thumbnail: {
+								url: pinMsgs.author.avatarURL
+							},
+							footer: {
+								text: `Message created by ${pinMsgs.author.username} (<@${pinMsgs.author.id}>)`
+							}
+					}
+				});
 
-				if (ch.guild.id !== pind.testServer) return;
-				channel.send("New pinned message with content\n" + pinMsgs.content)
+				if (channel.permissionsFor(channel.guild.me).has("MANAGE_MESSAGES") === false) return;
+
+				pinMsgs.unpin();
+				pinMsgs.react("📌");
+
+				pinnedRecently.add(channel.id);
+				setTimeout(() => {
+					pinnedRecently.delete(channel.id);
+				}, row.pinTimeout);
 			});
 		});
+
+		// TODO: Fetch pins first, THEN loop through channel pairs
+		if (channel.guild.id !== pind.testServer) return;
+		channel.send("New pinned message with content\n" + pinMsgs.content);
 	});
 }
 
@@ -122,7 +110,7 @@ client.on("channelPinsUpdate", channel => {
 
 client.on("message", (message) => {
 	if (message.author.bot) return;
-	if (message.channel.type == 'dm') return;
+	if (message.channel.type === 'dm') return;
 
 	const args = message.content.split(" ");
 
