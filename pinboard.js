@@ -13,14 +13,19 @@ client.on("ready", () => {
     client.user.setActivity("with a database of pins.")
 });
 
-client.on("channelPinsUpdate", channel => {
+client.on("channelPinsUpdate", (channel) => {
 	if (pinnedRecently.has(channel.id) return;
-	
-    // First, get all channel pairs from the database
-    sql.get(`SELECT * FROM channelPairs WHERE guildId = ${channel.guild.id}`).then((info) => {
-        if (!info) return;
 
-		info.forEach((row) => {
+	channel.fetchPinnedMessages()
+	.then((messages) => { 
+		var pinMsg = messages.first();
+		if (!pinMsg) return;
+
+		return sql.get(`SELECT * FROM channelPairs WHERE guildId = ${channel.guild.id}`);
+	}).then((pairs) => {
+		if (!pairs) return;
+
+		pairs.forEach((row) => {
 			// Check if mirror channel exists + we have perms to send there
 			var mirror = channel.guild.channels.find("name", row.channelTo);
 			if (!mirror) {
@@ -42,67 +47,73 @@ client.on("channelPinsUpdate", channel => {
 				var mainContent = "";
 			}
 
-			channel.fetchPinnedMessages().then((messages) => {
-				const pinMsgs = messages.first()
-				if (!pinMsgs) return;
-
-				// Image preview handler
-				var imgThumb = undefined;
-				if (pinMsgs.embeds[0] !== undefined) {
-					// Image is in embed
-					if (pinMsgs.embeds[0].thumbnail !== null) {
-						imgThumb = pinMsgs.embeds[0].thumbnail.proxyURL;
-					} else if (pinMsgs.embeds[0].image !== null) {
-						imgThumb = pinMsgs.embeds[0].image.proxyURL;
-					}
-				} else {
-					// Image is an attachment
-					if (pinMsgs.attachments.first() !== undefined) {
-						imgThumb = pinMsgs.attachments.first().proxyURL;
-					}
+			// Image preview handler
+			var imgThumb = undefined;
+			if (pinMsgs.embeds[0] !== undefined) {
+				// Image is in embed
+				if (pinMsgs.embeds[0].thumbnail !== null) {
+					imgThumb = pinMsgs.embeds[0].thumbnail.proxyURL;
+				} else if (pinMsgs.embeds[0].image !== null) {
+					imgThumb = pinMsgs.embeds[0].image.proxyURL;
 				}
-
-				// Non-image attachment handler
-				var attachURL = '';
+			} else {
+				// Image is an attachment
 				if (pinMsgs.attachments.first() !== undefined) {
-					if (!pinMsgs.attachments.first().width) {
-						attchURL = `[Attachment](${pinMsgs.attachments.first().url})`;
-					}
+					imgThumb = pinMsgs.attachments.first().proxyURL;
 				}
+			}
 
-				mirror.send(mainContent + `\nhttps://discordapp.com/channels/${pinMsgs.guild.id}/${pinMsgs.channel.id}/${pinMsgs.id}`, {
-					embed: {
-						color: 0x123456,
-							title: `New pinned message in ${channel.name}`,
-							description: `${pinMsgs.content}\n**${attchURL}**`,
-							image: {
-								url: imgThumb
-							},
-							thumbnail: {
-								url: pinMsgs.author.avatarURL
-							},
-							footer: {
-								text: `Message created by ${pinMsgs.author.username} (<@${pinMsgs.author.id}>)`
-							}
-					}
-				});
+			// Non-image attachment handler
+			var attachURL = '';
+			if (pinMsgs.attachments.first() !== undefined) {
+				if (!pinMsgs.attachments.first().width) {
+					attchURL = `[Attachment](${pinMsgs.attachments.first().url})`;
+				}
+			}
 
-				if (channel.permissionsFor(channel.guild.me).has("MANAGE_MESSAGES") === false) return;
+			mirror.send(mainContent + `\nhttps://discordapp.com/channels/${pinMsgs.guild.id}/${pinMsgs.channel.id}/${pinMsgs.id}`, {
+				embed: {
+					color: 0x123456,
+						title: `New pinned message in ${channel.name}`,
+						description: `${pinMsgs.content}\n**${attchURL}**`,
+						image: {
+							url: imgThumb
+						},
+						thumbnail: {
+							url: pinMsgs.author.avatarURL
+						},
+						footer: {
+							text: `Message created by ${pinMsgs.author.username} (<@${pinMsgs.author.id}>)`
+						}
+				}
+			});
 
-				pinMsgs.unpin();
-				pinMsgs.react("📌");
+			if (channel.permissionsFor(channel.guild.me).has("MANAGE_MESSAGES") === false) return;
 
-				pinnedRecently.add(channel.id);
-				setTimeout(() => {
-					pinnedRecently.delete(channel.id);
-				}, row.pinTimeout);
+			pinMsgs.unpin();
+			pinMsgs.react("📌");
+
+			pinnedRecently.add(channel.id);
+			setTimeout(() => {
+				pinnedRecently.delete(channel.id);
+			}, row.pinTimeout);
+
+	});
+});
+
+
+		// First, get all channel pairs from the database
+		sql.get(`SELECT * FROM channelPairs WHERE guildId = ${channel.guild.id}`).then((info) => {
+			if (!info) return;
+
+			info.forEach((row) => {
 			});
 		});
 
-		// TODO: Fetch pins first, THEN loop through channel pairs
-		if (channel.guild.id !== pind.testServer) return;
-		channel.send("New pinned message with content\n" + pinMsgs.content);
-	});
+	// TODO: Fetch pins first, THEN loop through channel pairs
+	if (channel.guild.id !== pind.testServer) return;
+	channel.send("New pinned message with content\n" + pinMsgs.content);
+});
 }
 
 
