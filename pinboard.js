@@ -74,17 +74,17 @@ client.on("channelPinsUpdate", (channel) => {
 			mirror.send(mainContent + `\nhttps://discordapp.com/channels/${pinMsgs.guild.id}/${pinMsgs.channel.id}/${pinMsgs.id}`, {
 				embed: {
 					color: 0x123456,
-						title: `New pinned message in ${channel.name}`,
-						description: `${pinMsgs.content}\n**${attchURL}**`,
-						image: {
-							url: imgThumb
-						},
-						thumbnail: {
-							url: pinMsgs.author.avatarURL
-						},
-						footer: {
-							text: `Message created by ${pinMsgs.author.username} (<@${pinMsgs.author.id}>)`
-						}
+					title: `New pinned message in ${channel.name}`,
+					description: `${pinMsgs.content}\n**${attchURL}**`,
+					image: {
+						url: imgThumb
+					},
+					thumbnail: {
+						url: pinMsgs.author.avatarURL
+					},
+					footer: {
+						text: `Message created by ${pinMsgs.author.username} (<@${pinMsgs.author.id}>)`
+					}
 				}
 			});
 
@@ -97,27 +97,12 @@ client.on("channelPinsUpdate", (channel) => {
 			setTimeout(() => {
 				pinnedRecently.delete(channel.id);
 			}, row.pinTimeout);
-
-	});
-});
-
-
-		// First, get all channel pairs from the database
-		sql.get(`SELECT * FROM channelPairs WHERE guildId = ${channel.guild.id}`).then((info) => {
-			if (!info) return;
-
-			info.forEach((row) => {
-			});
 		});
 
-	// TODO: Fetch pins first, THEN loop through channel pairs
-	if (channel.guild.id !== pind.testServer) return;
-	channel.send("New pinned message with content\n" + pinMsgs.content);
+		if (channel.guild.id !== pind.testServer) return;
+		channel.send("New pinned message with content\n" + pinMsgs.content);
+	});
 });
-}
-
-
-
 
 client.on("message", (message) => {
 	if (message.author.bot) return;
