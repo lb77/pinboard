@@ -2,7 +2,7 @@ var commandHandlers = {
 	/* TODO: Implement add and delete commands */
 
 	/* Help Command */
-	"help": ((message) => {
+	"help": ((message, args) => {
 		return message.channel.send("**Pinboard Help**", {
 			embed: {
 				color: 0x123456,
@@ -12,28 +12,28 @@ var commandHandlers = {
 	}),
 
 	/* General Info */
-	"info": ((message) => {
+	"info": ((message, args) => {
 		return message.channel.send("<:pinboard:381044242266456064> Pinboard\n```\nEver wanted to go past discord's pin limit? Are you known for pinning just too much? Well, worry no longer! Pinboard will take care of it for you!\n-=Techie Stuff=-\nLib: discord.js\nRunning on node v8\nHosted on glitch.com\n```\nPinboard requires the Manage Messages, Send Messages, and Embed Links permissions.\n`Pinboard, originally made by SmartiePlays#543`\nGitHub: https://github.com/lb77/pinboard");
 	}),
 
 	/* Create invite link */
-	"invite": ((message) => {
+	"invite": ((message, args) => {
 		return message.channel.send(`Invite me to your server with this link!\nhttps://discordapp.com/oauth2/authorize?client_id=${client.user.id}&scope=bot&permissions=289808`);
 	}),
 
 	/* Setup info */
-	"setup": ((message) => {
+	"setup": ((message, args) => {
 		return message.channel.send("Need help setting me up? Have I got a guide for you!\nhttps://github.com/SmartieYT/pinboard/blob/master/setup.md");
 	}),
 
 	/* Stop the bot */
-	"stop": ((message) => {
+	"stop": ((message, args) => {
 		if (message.author.id !== "374245143655612428") return;
 		process.exit();
 	}),
 
 	/* Check if all channels are properly set up */
-	"check": ((message) => {
+	"check": ((message, args) => {
 		// Permission checks
 		if (message.channel.permissionsFor(message.guild.me).has("MANAGE_MESSAGES") == false)
 			return message.channel.send("I do not have the manage messages permission for this guild! Please contact a server admin.");
@@ -91,7 +91,7 @@ var commandHandlers = {
 	}),
 
 	/* Create all channels passed in as text channels */
-	"create": ((message) => {
+	"create": ((message, args) => {
 		// Permission checks
 		if (message.guild.me.hasPermission("MANAGE_CHANNELS", true, true, true) == false)
 			return message.reply("I do not have the manage channels permission! Please contact a server admin.");
@@ -122,8 +122,21 @@ var commandHandlers = {
 		return message.channel.send(reply);
 	}),
 
+	"add": ((message, args) => {
+		if (message.guild.me.hasPermission("MANAGE_CHANNELS", true, true, true) == false)
+			return message.reply("I do not have the manage channels permission! Please contact a server admin.");
+
+		if (message.member.hasPermission("MANAGE_CHANNELS", true, true, true) == false)
+			return message.reply("You do not have the manage channels permission!");
+
+		if (args.length < 2)
+			return message.channel.send(`Usage: \`${prefix}.add channel1 channel2 [channel3 channel4 ... channelN channelN+1]\``);
+
+
+	}),
+
 	/* Set ping preference on new pin */
-	"setping": ((message) => {
+	"setping": ((message, args) => {
 		// Permission checks
 		if (message.member.hasPermission("MANAGE_GUILD", true, true, true) == false)
 			return message.reply("no");
@@ -146,7 +159,7 @@ var commandHandlers = {
 		});
 	}),
 
-	"dbstats": ((message) => {
+	"dbstats": ((message, args) => {
 		message.channel.send("Fetching your info! This may take a while...").then(msg => {
 			//This part is copy-pasted from above, more or less
 			sql.get(`SELECT * FROM guildInfo WHERE guildId = ${message.guild.id}`).then(info => {

@@ -115,7 +115,7 @@ client.on("message", (message) => {
 
 		if (commandHandlers[command]) {
 			console.log("Received command from " + message.author.name + ": " + message.content);
-			commandHandlers[command](args);
+			commandHandlers[command](message, args.slice(1));
 		}
 	}
 })
