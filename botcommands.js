@@ -1,6 +1,14 @@
-var commandHandlers = {
-	/* TODO: Implement add and delete commands */
+const Discord = require("discord.js");
+const client = new Discord.Client();
+const pind = require("./pind.json");
+const sql = require("sqlite");
 
+const prefix="pin.";
+
+sql.open("./database/pindb.sqlite");
+client.login(pind.tokenboi)
+
+var commandHandlers = {
 	/* Help Command */
 	"help": ((message, args) => {
 		return message.channel.send("**Pinboard Help**", {
@@ -35,17 +43,17 @@ var commandHandlers = {
 	/* Check if all channels are properly set up */
 	"check": ((message, args) => {
 		// Permission checks
-		if (message.channel.permissionsFor(message.guild.me).has("MANAGE_MESSAGES") == false)
+		if (message.channel.permissionsFor(message.guild.me).has("MANAGE_MESSAGES") === false)
 			return message.channel.send("I do not have the manage messages permission for this guild! Please contact a server admin.");
 
-		if (boardCh.permissionsFor(message.guild.me).has("SEND_MESSAGES") == false)
+		if (boardCh.permissionsFor(message.guild.me).has("SEND_MESSAGES") === false)
 			return message.channel.send("Check failed! I do not have the send messages permission in the pinboard channel!");
 
-		if (message.guild.me.hasPermission("EMBED_LINKS") == false)
+		if (message.guild.me.hasPermission("EMBED_LINKS") === false)
 			return message.channel.send("I do not have the embed links permission for this guild! Please contact a server admin.");
 
 		// Loop through each pair of linked channels
-		sql.get(`SELECT channelFrom,channelTo FROM channelPairs WHERE guildId = ${message.guild.id}`).then((pairs) => {	
+		sql.all(`SELECT channelFrom,channelTo FROM channelPairs WHERE guildId = ${message.guild.id}`).then((pairs) => {	
 			if (!pairs) {
 				return message.channel.send("No channels set up for pin mirroring! Run `" + prefix + "add channel1 channel2` to mirror pins from channel1 to channel2.");
 			}
@@ -93,10 +101,10 @@ var commandHandlers = {
 	/* Create all channels passed in as text channels */
 	"create": ((message, args) => {
 		// Permission checks
-		if (message.guild.me.hasPermission("MANAGE_CHANNELS", true, true, true) == false)
+		if (message.guild.me.hasPermission("MANAGE_CHANNELS", true, true, true) === false)
 			return message.reply("I do not have the manage channels permission! Please contact a server admin.");
 
-		if (message.member.hasPermission("MANAGE_CHANNELS", true, true, true) == false)
+		if (message.member.hasPermission("MANAGE_CHANNELS", true, true, true) === false)
 			return message.reply("You do not have the manage channels permission!");
 
 		// Loop through args (if any), create channel/notify of existence for each
@@ -123,28 +131,70 @@ var commandHandlers = {
 	}),
 
 	"add": ((message, args) => {
-		if (message.guild.me.hasPermission("MANAGE_CHANNELS", true, true, true) == false)
+		if (message.guild.me.hasPermission("MANAGE_CHANNELS", true, true, true) === false)
 			return message.reply("I do not have the manage channels permission! Please contact a server admin.");
 
-		if (message.member.hasPermission("MANAGE_CHANNELS", true, true, true) == false)
+		if (message.member.hasPermission("MANAGE_CHANNELS", true, true, true) === false)
 			return message.reply("You do not have the manage channels permission!");
 
 		if (args.length < 2)
-			return message.channel.send(`Usage: \`${prefix}.add channel1 channel2 [channel3 channel4 ... channelN channelN+1]\``);
+			return message.channel.send(`Usage: \`${prefix}.add channel1 channel2 [timeout pingOption]\``);
 
+		var pinTimeout = 0, pingPin = "none";
+	
+		// Optional params are 1) timeout between pins, and 2) who to ping on pin
+		if (args[2]) pinTimeout = parseInt(args[2], 10) || 0;
+		if (args[3]) pingPin = args[3];
 
+		sql.get(`SELECT * FROM channelPairs WHERE guildId = ${message.guild.id} AND channelFrom = ${args[0]} AND channelTo = ${args[1]}`).then((info) => {
+			if (info)
+				return message.channel.send("Pin mirroring already set up for these channels!");
+
+			return sql.get(`SELECT COUNT(*) AS numPairs FROM channelPairs WHERE guildId = ${message.guild.id} GROUP BY guildId`);
+		}).then((info) => {
+			sql.run(`INSERT INTO channelPairs (id, guildId, channelFrom, channelTo, pinTimeout, pingPin) VALUES (${info.numPairs}, ${message.guild.id}, ${args[0]}, ${args[1]}, ${pinTimeout}, ${pingPin})`);
+
+			return message.channel.send(`Pins in #${args[0]} will now be mirrored to #${args[1]}.`);
+		});
 	}),
+
+	"edit": ((message, args) => {
+		var rows = await sql.all(`SELECT *, COUNT(*) AS numPairs FROM channelPairs WHERE guildId = ${message.guild.id} GROUP BY guildId`);
+
+		var channelStr = "";
+		rows.forEach((row) => {
+			channelStr += `${row.id}. ${row.channelFrom} -> ${row.channelTo}\n`;
+		});
+		channelStr += `\nPlease choose a pair to edit (1-${row.numPairs}):`;
+
+		message.channel.send(channelStr);
+		
+		var regex = /^[0-9]+$/;
+		const filter = m => regex.test(m);
+		message.channel.awaitMessages(filter, {maxMatches: 1, time: 30000, errors: ['time']})
+			.catch(() => {
+				message.channel.send("Command timed out.");
+			}).then((collected) => {
+				const choice = collected.first();
+
+				// TODO: Finish pair editing functionality
+				// 1 - Set pin timeout
+				// 2 - Set ping preference
+				// 3 - Delete
+				message.channel.send(`1. Set pin timeout`);
+			});
+	});
 
 	/* Set ping preference on new pin */
 	"setping": ((message, args) => {
 		// Permission checks
-		if (message.member.hasPermission("MANAGE_GUILD", true, true, true) == false)
+		if (message.member.hasPermission("MANAGE_GUILD", true, true, true) === false)
 			return message.reply("no");
 
 		// Set ping preference to given option
 		var pingOptions = ["everyone", "here", "none"];
 		if (pingOptions.indexOf(args[0]) < 0)
-			return message.send("Usage: `" + prefix + "setping <everyone|here|none>`");
+			return message.reply("Usage: `" + prefix + "setping <everyone|here|none>`");
 
 		sql.get(`SELECT * FROM guildInfo WHERE guildId = ${message.guild.id}`).then((info) => {
 			if (!info) {
